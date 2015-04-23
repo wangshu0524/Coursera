@@ -1,0 +1,108 @@
+Title
+========================================================
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring web pages (click the **Help** toolbar button for more details on using R Markdown).
+
+When you click the **Knit HTML** button a web page will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+#read in data#
+
+train <- read.csv("/Users/wangshu/desktop/pml-training.csv", header = T, )
+
+#check zero covariates#
+
+library(caret)
+
+nsv <- nearZeroVar(train, saveMetrics = TRUE)
+
+# no vriable is zero #
+
+# check NA #
+
+na <- apply(train, 2, function(x) sum(x %in% NA))
+
+# we see many na(s) so we would delete these #
+
+keep <- which(na == 0)
+
+train1 <- train [,keep]
+
+#saw some empty cell, detect them and delete#
+
+na1 <- apply(train1, 2, function(x) sum(x %in% ""))
+
+keep1 <- which(na1 == 0)
+
+train2 <- train1[, keep1]
+
+train2$classe = factor(train2$classe)
+
+# column 1 and 2 are obviously useless in prediction #
+
+train2 <- train2[,-c(1:2)]
+
+#partition train2 data into training and crossvalidation#
+
+inTrain <- createDataPartition(train2$classe, p = 0.6)[[1]]
+
+training <- train2[ inTrain,]
+
+crossvalidation <- train2[-inTrain,]
+
+#try model specifications mentioned in the lecture#
+
+mod1 <- train(classe ~ ., data=training, method="rf")
+
+mod2 <- train(classe ~ ., data=training, method="gbm")
+
+mod3 <- train(classe ~ ., data=training, method="lda")
+
+```
+
+```{r}
+# see which method perform the best on training data #
+
+pred1 <- predict(mod1,crossvalidation)
+
+confusionMatrix(crossvalidation$classe, pred1)
+
+```
+```{r}
+
+pred2 <- predict(mod2,crossvalidation)
+
+confusionMatrix(crossvalidation$classe, pred2)
+
+```
+```{r}
+pred3 <- predict(mod3,crossvalidation)
+
+confusionMatrix(crossvalidation$classe, pred3)
+```
+```{r}
+
+# Looks the random forest is the best#
+
+# import testing data and clean it the same way as the training data #
+
+test <- read.csv("/Users/wangshu/desktop/pml-testing.csv", header = T, )
+
+test1 <- test [,keep]
+
+test2 <- test1[, keep1]
+
+test2 <- test2[, -c(1,2)]
+
+prediction <- predict(mod1, test2)
+
+prediction
+```
+```{r}
+# SUMMARY: After deleting "X" and "name" variables in the dataset, random forest is the model I finally chose
+# by comparing with methods gbm and lda
+# out of sample error achieved 99.9% according to crossvalidation
+
+```
+
+
